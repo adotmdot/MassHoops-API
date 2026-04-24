@@ -1,7 +1,7 @@
 [project]
 name = "nba-analytics-ai"
 version = "0.1.0"
-description = "Add your description here"
+description = "AI-powered basketball analytics API that converts natural language into SQL queries with chart visualizations"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = []
