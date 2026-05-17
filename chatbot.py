@@ -40,29 +40,31 @@ class ChartEngine:
     def build_title(question: str, chart_type: str) -> str:
         q = question.lower()
 
-        if "plastics" in q:
-            return "Monthly Revenue Trend — Plastics (Last 12 Months)"
-        if "line of business" in q and "share" in q:
-            return "Revenue Share by Line of Business"
-        if "business unit" in q:
-            return "Revenue by Business Unit"
-        if "customer" in q:
-            return "Revenue by Customer"
+        if "points" in q or "scorer" in q:
+            return "Points Per Player"
+        if "assists" in q:
+            return "Assists Per Player"
+        if "rebounds" in q:
+            return "Rebounds Per Player"
+        if "team" in q and ("wins" in q or "best" in q):
+            return "Team Wins Comparison"
+        if "trend" in q or "over time" in q:
+            return "Performance Trend"
 
         if chart_type == "pie":
-            return "Revenue Distribution (%)"
+            return "Stat Distribution (%)"
         if chart_type == "bar":
-            return "Revenue by Category"
+            return "Basketball Stats Comparison"
         if chart_type == "line":
-            return "Revenue Trend Over Time"
+            return "Performance Over Time"
 
-        return "Revenue Analysis"
+        return "Basketball Analysis"
 
     @staticmethod
     def axis_labels(chart_type: str):
         return {
-            "x": "Month" if chart_type == "line" else "Category",
-            "y": "Revenue ($)"
+            "x": "Player / Team" if chart_type != "line" else "Time",
+            "y": "Value"
         }
 
     @staticmethod
@@ -245,113 +247,70 @@ class CustomerChatbot:
     # -------------------------
 
     def _build_instructions(self, spec: DatasetSpec, wants_chart: bool) -> str:
-        object_hint = ", ".join(spec.allowed_objects) if spec.allowed_objects else "authorized tables/views"
-
         chart_instructions = (
-            "The user explicitly asked for a chart. "
-            "If the request is chartable:\n"
-            "- For simple charts, return TWO columns: label and value.\n"
-            "- For breakdowns (by Business Unit, Customer, Line of Business), return THREE columns: label, value, series.\n"
-            "label must be text/date. "
-            "value must be numeric. "
-            "For monthly trends, use YYYY-MM for label. "
-            "For monthly revenue trends, return label and value. "
-            "If the trend is broken down by Business Unit, Customer, or Line of Business, return label, value, and series. "
-        ) if wants_chart else (
-            "Do NOT prepare chart-oriented output unless the user explicitly asks for a chart, graph, plot, or visualization. "
+            "The user asked for a chart.\n"
+            "Focus on generating a SQL query that returns 2 columns:\n"
+            "- First column: label (player name or team)\n"
+            "- Second column: numeric value (points, assists, etc.)\n"
         )
 
-        base = (
-            f"You are a SQL data retrieval agent for {spec.display_name}. "
-            f"Only issue read-only SELECT statements against {object_hint}. "
-            "Never modify data. "
-            "Never use SELECT *. "
-            "Only select the minimum columns needed. "
-            "Return compact aggregated results whenever possible. "
+        return (
+            "You are a basketball analytics AI assistant.\n\n"
 
-            "\nCRITICAL TIME-SERIES RULES:\n"
-            "- For any request like 'over time', 'trend', 'by month', or 'monthly', ALWAYS aggregate.\n"
-            "- NEVER return raw row-level data for time-series requests.\n"
-            "- Default to the LAST 12 MONTHS when no time range is specified.\n"
-            "- If the user says 'last N months', interpret it as the previous N full calendar months unless they explicitly ask for current month or MTD.\n"
-            "- ALWAYS limit time-series output to a maximum of 24 periods.\n"
-            "- ALWAYS order time periods chronologically ascending.\n"
-            "- For monthly trends, return label and value.\n"
-            "- If broken down by Business Unit, Customer, or Line of Business, return label, value, and series.\n"
+            "You MUST:\n"
+            "- Only generate SQL SELECT queries\n"
+            "- Use the 'players' and 'teams' tables\n"
+            "- Never use SELECT *\n"
+            "- Only select needed columns\n"
+            "- Prefer aggregated or sorted results\n"
+            "- Limit results to 10–20 rows max\n\n"
 
-            "\nCRITICAL OUTPUT SIZE RULES:\n"
-            "- Never return more than 50 rows.\n"
-            "- Prefer aggregated output over detailed output.\n"
-            "- If a query would be large, reduce it automatically.\n"
+            "Basketball Rules:\n"
+            "- Points = points_per_game\n"
+            "- Rebounds = rebounds_per_game\n"
+            "- Assists = assists_per_game\n"
+            "- Team performance = wins and losses\n\n"
 
-            "\nCRITICAL COLUMN RULES:\n"
-            "- Division ALWAYS maps to [Line of Business].\n"
-            "- NEVER use [Business Unit] for division queries.\n"
-            "- If user says 'Plastics', you MUST use [Line of Business] LIKE '%Outsource - Plastics%'.\n"
+            "Examples:\n"
+            "- 'top scorers' → ORDER BY points_per_game DESC\n"
+            "- 'best teams' → ORDER BY wins DESC\n"
+            "- 'top assists' → ORDER BY assists_per_game DESC\n\n"
 
-            "\nCHART RULES:\n"
-            f"- {chart_instructions}\n"
-            "- If the user did not explicitly ask for a chart, answer in text only.\n"
-        )
+            f"{chart_instructions}\n"
 
-        if spec.guidance:
-            base += f"\nAdditional rules:\n{spec.guidance}\n"
-
-        return base
+            "If the user asks a basketball question, generate the correct SQL query and return the result."
+    )
 
     # -------------------------
     # Data extraction
     # -------------------------
 
     def _extract_chart_rows(self, result: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
-        rows = None
-
         try:
-            steps = result.get("intermediate_steps") or []
-            for step in reversed(steps):
+            steps = result.get("intermediate_steps", [])
+
+            for step in steps:
                 if isinstance(step, tuple) and len(step) >= 2:
                     observation = step[1]
-                    if isinstance(observation, list) and observation:
-                        rows = observation
-                        break
-        except Exception:
-            rows = None
 
-        if rows is None:
-            rows = None
+                    # 🔥 THIS is your actual SQL result
+                    if isinstance(observation, list) and len(observation) > 0:
+                        rows = []
 
-        if not isinstance(rows, list):
-            return None
+                        for row in observation:
+                            if isinstance(row, tuple) and len(row) >= 2:
+                                rows.append({
+                                    "label": str(row[0]),
+                                    "value": float(row[1])
+                                })
 
-        clean_rows: List[Dict[str, Any]] = []
-        for r in rows[:24]:
-            if not isinstance(r, dict):
-                continue
+                        if rows:
+                            return rows
 
-            vals = list(r.values())
-            label = r.get("label", vals[0] if len(vals) > 0 else None)
-            value = r.get("value", vals[1] if len(vals) > 1 else None)
-            series = r.get("series", "Total")
+        except Exception as e:
+            print("[ERROR extracting rows]", e)
 
-            if label is None or value is None:
-                continue
-
-            label = str(label).strip()
-            if not label:
-                continue
-
-            try:
-                value = float(value)
-            except Exception:
-                continue
-
-            clean_rows.append({
-                "label": label,
-                "value": value,
-                "series": series
-            })
-
-        return clean_rows or None
+        return None
 
     def _build_chart_spec(self, rows, question):
 
@@ -597,6 +556,8 @@ class CustomerChatbot:
                     "input": f"{instructions}\n\nConversation:\n{history_text}\n\nQuestion: {normalized_question}"
                 }
             )
+
+            print("[DEBUG FULL RESULT]", result)
         except Exception as exc:
             return {
                 "reply": f"Error processing request: {exc}",

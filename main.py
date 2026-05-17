@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 from chatbot import CustomerChatbot, DatasetSpec
 from getData import build_sql_database
+from fastapi.staticfiles import StaticFiles
 
 # =========================
 
@@ -11,6 +12,7 @@ from getData import build_sql_database
 # =========================
 
 app = FastAPI(title="MassHoops API", version="1.0.0")
+app.mount("/charts", StaticFiles(directory="charts"), name="charts")
 
 # =========================
 
