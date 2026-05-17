@@ -174,7 +174,7 @@ class CustomerChatbot:
         if not datasets:
             raise ValueError("At least one dataset specification is required.")
 
-        self.max_iterations = int(os.getenv("AGENT_MAX_ITERATIONS", "12"))
+        self.max_iterations = int(os.getenv("AGENT_MAX_ITERATIONS", "5"))
         self.verbose = os.getenv("AGENT_VERBOSE", "true").lower() in {"1", "true", "yes", "on"}
         self.llm = self._build_llm()
         self.charts_dir = Path(charts_dir)
@@ -206,6 +206,7 @@ class CustomerChatbot:
         return ChatOpenAI(
             model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
             temperature=0,
+            timeout=30,
         )
 
     def _build_agent(self, database: SQLDatabase):
@@ -264,6 +265,7 @@ class CustomerChatbot:
             "- Only select needed columns\n"
             "- Prefer aggregated or sorted results\n"
             "- Limit results to 10–20 rows max\n\n"
+            "- If the SQL query returns multiple rows, include ALL rows in the final answer.\n"
 
             "Basketball Rules:\n"
             "- Points = points_per_game\n"
@@ -285,32 +287,57 @@ class CustomerChatbot:
     # Data extraction
     # -------------------------
 
-    def _extract_chart_rows(self, result: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
-        try:
-            steps = result.get("intermediate_steps", [])
+    def _extract_chart_rows(self, result) -> list[tuple[str, float]]:
+        """
+        Extract chart rows from:
+        1. SQL result tuples in the output
+        2. Markdown tables in the output
+        """
 
-            for step in steps:
-                if isinstance(step, tuple) and len(step) >= 2:
-                    observation = step[1]
+        output = result.get("output", "")
+        rows = []
 
-                    # 🔥 THIS is your actual SQL result
-                    if isinstance(observation, list) and len(observation) > 0:
-                        rows = []
+        # ----------------------------------------------------------
+        # 1. Try to parse Python tuple output:
+        # ('Luka Doncic', 33.9)
+        # ----------------------------------------------------------
+        tuple_pattern = r"\('([^']+)',\s*([\d.]+)\)"
+        matches = re.findall(tuple_pattern, output)
 
-                        for row in observation:
-                            if isinstance(row, tuple) and len(row) >= 2:
-                                rows.append({
-                                    "label": str(row[0]),
-                                    "value": float(row[1])
-                                })
+        for label, value in matches:
+            rows.append({
+                "label": label,
+                "value": float(value)
+            })
 
-                        if rows:
-                            return rows
+        if rows:
+            return rows
 
-        except Exception as e:
-            print("[ERROR extracting rows]", e)
+        # ----------------------------------------------------------
+        # 2. Try to parse markdown table rows:
+        # | Luka Doncic | 33.9 |
+        # ----------------------------------------------------------
+        table_pattern = r"\|\s*([^|]+?)\s*\|\s*([\d.]+)\s*\|"
+        matches = re.findall(table_pattern, output)
 
-        return None
+        for label, value in matches:
+            label = label.strip()
+
+            # Skip header rows
+            if label.lower() in [
+                "player name",
+                "team",
+                "label",
+                "name",
+            ]:
+                continue
+
+            rows.append({
+                "label": label,
+                "value": float(value)
+            })
+
+        return rows
 
     def _build_chart_spec(self, rows, question):
 

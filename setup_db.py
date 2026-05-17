@@ -4,6 +4,9 @@ conn = sqlite3.connect("basketball.db")
 cursor = conn.cursor()
 
 # Create tables
+# Drop tables if they already exist
+cursor.execute("DROP TABLE IF EXISTS players")
+cursor.execute("DROP TABLE IF EXISTS teams")
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS players (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
