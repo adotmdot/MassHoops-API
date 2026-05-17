@@ -18,7 +18,12 @@ from getData import build_sql_database
 from datetime import datetime
 import matplotlib.pyplot as plt
 
-from nba_live import get_top_scorers, get_player_stats
+from nba_live import (
+    get_top_scorers,
+    get_top_rebounders,
+    get_top_assist_leaders,
+    get_player_stats,
+)
 
 load_dotenv()
 
@@ -586,6 +591,50 @@ class CustomerChatbot:
                 "vega_spec": None,
                 "chart_url": None,
             }
+            
+            
+        # -----------------------------------
+        # Live NBA Data: Top Rebounders
+        # -----------------------------------
+        if "top rebounders" in q or "rebound leaders" in q:
+            players = get_top_rebounders(10)
+
+            lines = ["🏀 Top 10 NBA Rebound Leaders (Live Data):", ""]
+
+            for i, player in enumerate(players, start=1):
+                lines.append(
+                    f"{i}. {player['player']} ({player['team']}) - {player['value']} RPG"
+                )
+
+            return {
+                "reply": "\n".join(lines),
+                "vega_spec": None,
+                "chart_url": None,
+            }   
+            
+            
+        # -----------------------------------
+        # Live NBA Data: Assist Leaders
+        # -----------------------------------
+        if (
+            "top assists" in q
+            or "assist leaders" in q
+            or "top assist leaders" in q
+        ):
+            players = get_top_assist_leaders(10)
+
+            lines = ["🏀 Top 10 NBA Assist Leaders (Live Data):", ""]
+
+            for i, player in enumerate(players, start=1):
+                lines.append(
+                    f"{i}. {player['player']} ({player['team']}) - {player['value']} APG"
+                )
+
+            return {
+                "reply": "\n".join(lines),
+                "vega_spec": None,
+                "chart_url": None,
+            }     
 
         # -----------------------------------
         # Live NBA Data: Player Stats
