@@ -18,6 +18,8 @@ from getData import build_sql_database
 from datetime import datetime
 import matplotlib.pyplot as plt
 
+from nba_live import get_top_scorers, get_player_stats
+
 load_dotenv()
 
 
@@ -564,27 +566,123 @@ class CustomerChatbot:
         normalized_question = normalize_prompt(question)
         wants_chart = user_explicitly_requested_chart(question)
 
+        q = question.lower()
+
+        # -----------------------------------
+        # Live NBA Data: Top Scorers
+        # -----------------------------------
+        if "top scorers" in q or "scoring leaders" in q:
+            players = get_top_scorers(10)
+
+            lines = ["🏀 Top 10 NBA Scorers (Live Data):", ""]
+
+            for i, player in enumerate(players, start=1):
+                lines.append(
+                    f"{i}. {player['player']} ({player['team']}) - {player['value']} PPG"
+                )
+
+            return {
+                "reply": "\n".join(lines),
+                "vega_spec": None,
+                "chart_url": None,
+            }
+
+        # -----------------------------------
+        # Live NBA Data: Player Stats
+        # -----------------------------------
+        if "stats" in q:
+            player_name = (
+                question.lower()
+                .replace("what are", "")
+                .replace("what is", "")
+                .replace("show me", "")
+                .replace("'s", "")
+                .replace("stats", "")
+                .strip()
+                .title()
+            )
+
+            stats = get_player_stats(player_name)
+
+            if not stats:
+                return {
+                    "reply": f"Could not find stats for {player_name}.",
+                    "vega_spec": None,
+                    "chart_url": None,
+                }
+
+            reply = f"""
+            🏀 {stats['player']} ({stats['team']}) — {stats['season']}
+
+            Games Played: {stats['games']}
+            Points: {stats['points']} PPG
+            Rebounds: {stats['rebounds']} RPG
+            Assists: {stats['assists']} APG
+            FG%: {stats['fg_pct']}%
+            3PT%: {stats['three_pct']}%
+            FT%: {stats['ft_pct']}%
+            """.strip()
+
+            return {
+                "reply": reply,
+                "vega_spec": None,
+                "chart_url": None,
+            }
+
+        # -----------------------------------
+        # Debug Logging
+        # -----------------------------------
         print(f"[ORIGINAL] {question}")
         print(f"[NORMALIZED] {normalized_question}")
         print(f"[WANTS_CHART] {wants_chart}")
 
+        # -----------------------------------
+        # Empty Question Check
+        # -----------------------------------
         if not question:
-            return {"reply": "Please provide a question.", "vega_spec": None, "chart_url": None}
+            return {
+                "reply": "Please provide a question.",
+                "vega_spec": None,
+                "chart_url": None,
+            }
 
+        # -----------------------------------
+        # Conversation History
+        # -----------------------------------
         history = self.histories[session_id][-self.max_history:]
-        history_text = "\n".join(f"User: {q}\nAssistant: {a}" for q, a in history)
+        history_text = "\n".join(
+            f"User: {q}\nAssistant: {a}" for q, a in history
+        )
 
+        # -----------------------------------
+        # Select Dataset
+        # -----------------------------------
         dataset_runtime = self._select_dataset(normalized_question)
-        instructions = self._build_instructions(dataset_runtime.spec, wants_chart=wants_chart)
 
+        # -----------------------------------
+        # Build Instructions
+        # -----------------------------------
+        instructions = self._build_instructions(
+            dataset_runtime.spec,
+            wants_chart=wants_chart,
+        )
+
+        # -----------------------------------
+        # Run SQL Agent
+        # -----------------------------------
         try:
             result: Dict[str, Any] = dataset_runtime.agent.invoke(
                 {
-                    "input": f"{instructions}\n\nConversation:\n{history_text}\n\nQuestion: {normalized_question}"
+                    "input": (
+                        f"{instructions}\n\n"
+                        f"Conversation:\n{history_text}\n\n"
+                        f"Question: {normalized_question}"
+                    )
                 }
             )
 
             print("[DEBUG FULL RESULT]", result)
+
         except Exception as exc:
             return {
                 "reply": f"Error processing request: {exc}",
@@ -592,14 +690,23 @@ class CustomerChatbot:
                 "chart_url": None,
             }
 
+        # -----------------------------------
+        # Extract Reply
+        # -----------------------------------
         output = result.get("output")
         reply = output.strip() if isinstance(output, str) else "No response."
 
+        # -----------------------------------
+        # Save Last SQL (optional)
+        # -----------------------------------
         executed_sql = None
         if executed_sql:
             cleaned = executed_sql.strip().rstrip(";")
             self._last_sql_by_session[session_id] = cleaned
 
+        # -----------------------------------
+        # Chart Generation
+        # -----------------------------------
         chart_spec = None
         chart_url = None
 
@@ -610,17 +717,30 @@ class CustomerChatbot:
             if rows:
                 filename = self._save_chart_png(rows, question, session_id)
                 if filename:
-                    chart_url = self._build_chart_url(public_base_url, filename)
+                    chart_url = self._build_chart_url(
+                        public_base_url,
+                        filename
+                    )
 
-            print(f"[DEBUG] CHART ROWS SAMPLE: {rows[:3] if rows else 'NONE'}")
-            print(f"[DEBUG] CHART GENERATED: {'YES' if chart_spec else 'NO'}")
+            print(
+                f"[DEBUG] CHART ROWS SAMPLE: "
+                f"{rows[:3] if rows else 'NONE'}"
+            )
+            print(
+                f"[DEBUG] CHART GENERATED: "
+                f"{'YES' if chart_spec else 'NO'}"
+            )
             print(f"[DEBUG] CHART URL: {chart_url}")
 
-        #log_interaction(question=question, answer=reply)
-
+        # -----------------------------------
+        # Save Conversation History
+        # -----------------------------------
         self.histories[session_id].append((question, reply))
         self.histories[session_id] = self.histories[session_id][-self.max_history:]
 
+        # -----------------------------------
+        # Final Response
+        # -----------------------------------
         return {
             "reply": reply,
             "vega_spec": chart_spec if wants_chart else None,
