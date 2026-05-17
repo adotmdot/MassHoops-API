@@ -23,6 +23,7 @@ from nba_live import (
     get_top_rebounders,
     get_top_assist_leaders,
     get_player_stats,
+    get_nba_standings,
 )
 
 load_dotenv()
@@ -634,7 +635,44 @@ class CustomerChatbot:
                 "reply": "\n".join(lines),
                 "vega_spec": None,
                 "chart_url": None,
-            }     
+            }  
+            
+            
+        # -----------------------------------
+        # Live NBA Data: Standings
+        # -----------------------------------
+        if (
+            "standings" in q
+            or "best record" in q
+            or "first in the west" in q
+            or "first in the east" in q
+        ):
+            standings = get_nba_standings(10)
+
+            # Handle conference-specific requests
+            if "west" in q:
+                standings = [t for t in standings if t["conference"] == "West"][:10]
+                title = "🏀 Western Conference Standings:"
+            elif "east" in q:
+                standings = [t for t in standings if t["conference"] == "East"][:10]
+                title = "🏀 Eastern Conference Standings:"
+            else:
+                title = "🏀 Top 10 NBA Teams by Record:"
+
+            lines = [title, ""]
+
+            for team in standings:
+                lines.append(
+                    f"{team['rank']}. {team['team']} — "
+                    f"{team['wins']}-{team['losses']} "
+                    f"({team['win_pct']}%)"
+                )
+
+            return {
+                "reply": "\n".join(lines),
+                "vega_spec": None,
+                "chart_url": None,
+            }       
 
         # -----------------------------------
         # Live NBA Data: Player Stats

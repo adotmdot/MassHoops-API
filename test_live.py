@@ -1,5 +1,6 @@
-from nba_live import get_player_stats
+from nba_live import get_nba_standings
 
-stats = get_player_stats("Nikola Jokic")
+standings = get_nba_standings(10)
 
-print(stats)
+for team in standings:
+    print(team)

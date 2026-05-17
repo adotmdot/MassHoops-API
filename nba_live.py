@@ -1,6 +1,7 @@
 from nba_api.stats.endpoints import leagueleaders
 from nba_api.stats.static import players
 from nba_api.stats.endpoints import playercareerstats
+from nba_api.stats.endpoints import leaguestandings
 
 
 def get_top_scorers(limit=10):
@@ -99,3 +100,23 @@ def get_player_stats(player_name: str):
         "three_pct": round(float(latest["FG3_PCT"]) * 100, 1),
         "ft_pct": round(float(latest["FT_PCT"]) * 100, 1),
     } 
+    
+    
+def get_nba_standings(limit=30):
+    """
+    Returns current NBA standings.
+    """
+    standings = leaguestandings.LeagueStandings()
+    df = standings.get_data_frames()[0]
+
+    return [
+        {
+            "team": row["TeamName"],
+            "wins": int(row["WINS"]),
+            "losses": int(row["LOSSES"]),
+            "win_pct": round(float(row["WinPCT"]) * 100, 1),
+            "conference": row["Conference"],
+            "rank": int(row["PlayoffRank"]),
+        }
+        for _, row in df.head(limit).iterrows()
+    ]    
