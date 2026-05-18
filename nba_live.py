@@ -119,4 +119,58 @@ def get_nba_standings(limit=30):
             "rank": int(row["PlayoffRank"]),
         }
         for _, row in df.head(limit).iterrows()
-    ]    
+    ] 
+    
+    
+def get_team_record(team_name: str):
+    """
+    Returns the current record for a given NBA team.
+    """
+    standings = get_nba_standings(30)
+
+    team_name_lower = team_name.lower()
+
+    # Common aliases
+    aliases = {
+        "lakers": "Lakers",
+        "celtics": "Celtics",
+        "knicks": "Knicks",
+        "thunder": "Thunder",
+        "nuggets": "Nuggets",
+        "warriors": "Warriors",
+        "heat": "Heat",
+        "bulls": "Bulls",
+        "spurs": "Spurs",
+        "rockets": "Rockets",
+        "cavaliers": "Cavaliers",
+        "pistons": "Pistons",
+        "raptors": "Raptors",
+        "bucks": "Bucks",
+        "suns": "Suns",
+        "mavericks": "Mavericks",
+        "clippers": "Clippers",
+        "hawks": "Hawks",
+        "magic": "Magic",
+        "kings": "Kings",
+        "grizzlies": "Grizzlies",
+        "pelicans": "Pelicans",
+        "nets": "Nets",
+        "hornets": "Hornets",
+        "jazz": "Jazz",
+        "blazers": "Trail Blazers",
+        "trail blazers": "Trail Blazers",
+        "timberwolves": "Timberwolves",
+        "wolves": "Timberwolves",
+        "76ers": "76ers",
+        "sixers": "76ers",
+        "pacers": "Pacers",
+        "wizards": "Wizards",
+    }
+
+    search_term = aliases.get(team_name_lower, team_name)
+
+    for team in standings:
+        if search_term.lower() in team["team"].lower():
+            return team
+
+    return None       

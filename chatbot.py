@@ -24,6 +24,7 @@ from nba_live import (
     get_top_assist_leaders,
     get_player_stats,
     get_nba_standings,
+    get_team_record,
 )
 
 load_dotenv()
@@ -672,7 +673,50 @@ class CustomerChatbot:
                 "reply": "\n".join(lines),
                 "vega_spec": None,
                 "chart_url": None,
-            }       
+            }
+            
+            
+        # -----------------------------------
+        # Live NBA Data: Team Record
+        # -----------------------------------
+        if "record" in q and "best record" not in q:
+            # Remove common words to isolate the team name
+            team_name = (
+                question.lower()
+                .replace("what is the", "")
+                .replace("what's the", "")
+                .replace("what is", "")
+                .replace("show me", "")
+                .replace("record", "")
+                .replace("of", "")
+                .replace("?", "")
+                .strip()
+                .title()
+            )
+
+            team = get_team_record(team_name)
+
+            if not team:
+                return {
+                    "reply": f"Could not find a team named {team_name}.",
+                    "vega_spec": None,
+                    "chart_url": None,
+                }
+
+            reply = f"""
+        🏀 {team['team']}
+
+        Record: {team['wins']}-{team['losses']}
+        Win Percentage: {team['win_pct']}%
+        Conference: {team['conference']}
+        Conference Rank: {team['rank']}
+        """.strip()
+
+            return {
+                "reply": reply,
+                "vega_spec": None,
+                "chart_url": None,
+            }           
 
         # -----------------------------------
         # Live NBA Data: Player Stats

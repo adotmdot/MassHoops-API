@@ -1,6 +1,5 @@
-from nba_live import get_nba_standings
+from nba_live import get_team_record
 
-standings = get_nba_standings(10)
+team = get_team_record("Lakers")
 
-for team in standings:
-    print(team)
+print(team)
