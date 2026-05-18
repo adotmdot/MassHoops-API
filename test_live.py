@@ -1,5 +1,7 @@
-from nba_live import get_team_record
+from nba_live import get_team_roster
 
-team = get_team_record("Lakers")
+players = get_team_roster("Lakers")
 
-print(team)
+for player in players:
+    print(player)
+    

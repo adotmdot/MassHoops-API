@@ -25,6 +25,11 @@ from nba_live import (
     get_player_stats,
     get_nba_standings,
     get_team_record,
+    get_games_today,
+    get_scoreboard,
+    get_team_roster,
+    get_team_leader,
+    compare_players,
 )
 
 load_dotenv()
@@ -716,7 +721,244 @@ class CustomerChatbot:
                 "reply": reply,
                 "vega_spec": None,
                 "chart_url": None,
-            }           
+            }  
+            
+            
+        # -----------------------------------
+        # Live NBA Data: Games Today
+        # -----------------------------------
+        if (
+            "who plays tonight" in q
+            or "games today" in q
+            or "games tonight" in q
+            or "today's games" in q
+            or "todays games" in q
+            or "schedule today" in q
+        ):
+            games = get_games_today()
+
+            if not games:
+                return {
+                    "reply": "🏀 There are no NBA games scheduled today.",
+                    "vega_spec": None,
+                    "chart_url": None,
+                }
+
+            reply = "🏀 Today's NBA Games:\n\n"
+
+            for i, game in enumerate(games, 1):
+                reply += f"{i}. {game['away']} at {game['home']}\n"
+
+            return {
+                "reply": reply.strip(),
+                "vega_spec": None,
+                "chart_url": None,
+            }
+            
+            
+            
+        # --------------------------------
+        # Live NBA Data: Team Roster
+        # --------------------------------
+        if (
+            "roster" in q
+            or "who is on the" in q
+            or "who plays for" in q
+        ):
+            team_name = (
+                question.lower()
+                .replace("show me the", "")
+                .replace("show", "")
+                .replace("the", "")
+                .replace("roster", "")
+                .replace("who is on", "")
+                .replace("who's on", "")
+                .replace("who plays for", "")
+                .strip()
+                .title()
+            )
+
+            players = get_team_roster(team_name)
+
+            if not players:
+                return {
+                    "reply": f"Could not find roster for {team_name}.",
+                    "vega_spec": None,
+                    "chart_url": None,
+                }
+
+            lines = [f"🏀 {team_name} Roster:", ""]
+
+            for i, player in enumerate(players, start=1):
+                lines.append(f"{i}. {player}")
+
+            return {
+                "reply": "\n".join(lines),
+                "vega_spec": None,
+                "chart_url": None,
+            } 
+            
+            
+               
+        # --------------------------------
+        # Live NBA Data: Team Leaders
+        # --------------------------------
+        if (
+            "leading scorer" in q
+            or "leading rebounder" in q
+            or "leading assister" in q
+            or "most points on" in q
+            or "most rebounds on" in q
+            or "most assists on" in q
+        ):
+            stat = "PTS"
+
+            if "rebound" in q:
+                stat = "REB"
+            elif "assist" in q:
+                stat = "AST"
+
+            # Clean question to isolate team name
+            team_name = (
+                question.lower()
+                .replace("who is the", "")
+                .replace("who's the", "")
+                .replace("leading scorer", "")
+                .replace("leading rebounder", "")
+                .replace("leading assister", "")
+                .replace("most points on", "")
+                .replace("most rebounds on", "")
+                .replace("most assists on", "")
+                .replace("for", "")
+                .replace("on", "")
+                .replace("?", "")
+                .strip()
+                .title()
+            )
+
+            leader = get_team_leader(team_name, stat)
+
+            if not leader:
+                return {
+                    "reply": f"Could not find team leader data for {team_name}.",
+                    "vega_spec": None,
+                    "chart_url": None,
+                }
+
+            stat_label = {
+                "PTS": "points",
+                "REB": "rebounds",
+                "AST": "assists",
+            }[leader["stat"]]
+
+            reply = (
+                f"🏀 {leader['player']} leads the {leader['team']} "
+                f"with {leader['value']} {stat_label} per game."
+            )
+
+            return {
+                "reply": reply,
+                "vega_spec": None,
+                "chart_url": None,
+            }
+            
+            
+        # --------------------------------
+        # Live NBA Data: Compare Players
+        # --------------------------------
+        if "compare" in q or " vs " in q:
+            player1 = None
+            player2 = None
+
+            # Format: "Compare LeBron James and Kevin Durant"
+            if "compare" in q and " and " in q:
+                cleaned = (
+                    question
+                    .replace("Compare", "")
+                    .replace("compare", "")
+                    .strip()
+                )
+                parts = cleaned.split(" and ", 1)
+
+                if len(parts) == 2:
+                    player1 = parts[0].strip()
+                    player2 = parts[1].strip()
+
+            # Format: "LeBron James vs Kevin Durant"
+            elif " vs " in q:
+                # Use original question to preserve capitalization,
+                # but split on lowercase for consistency.
+                parts = re.split(r"\s+vs\s+", question, flags=re.IGNORECASE)
+
+                if len(parts) == 2:
+                    player1 = parts[0].strip()
+                    player2 = parts[1].strip()
+
+            if player1 and player2:
+                comparison = compare_players(player1, player2)
+
+                if not comparison:
+                    return {
+                        "reply": "Could not compare those players.",
+                        "vega_spec": None,
+                        "chart_url": None,
+                    }
+
+                p1 = comparison["player1"]
+                p2 = comparison["player2"]
+
+                reply = f"""
+        🏀 Player Comparison
+
+        {p1['player']} ({p1['team']})
+        • PPG: {p1['points']}
+        • RPG: {p1['rebounds']}
+        • APG: {p1['assists']}
+        • FG%: {p1['fg_pct']}%
+        • 3PT%: {p1['three_pct']}%
+        • FT%: {p1['ft_pct']}%
+
+        {p2['player']} ({p2['team']})
+        • PPG: {p2['points']}
+        • RPG: {p2['rebounds']}
+        • APG: {p2['assists']}
+        • FG%: {p2['fg_pct']}%
+        • 3PT%: {p2['three_pct']}%
+        • FT%: {p2['ft_pct']}%
+        """.strip()
+
+                return {
+                    "reply": reply,
+                    "vega_spec": None,
+                    "chart_url": None,
+                }       
+            
+        # --------------------------------
+        # Live NBA Data: Today's Scores
+        # --------------------------------
+        if "score" in q or "scores" in q or "who won" in q:
+            games = get_scoreboard()
+
+            if not games:
+                return {
+                    "reply": "No NBA games found for today.",
+                    "vega_spec": None,
+                    "chart_url": None,
+                }
+
+            lines = []
+            for i, game in enumerate(games, 1):
+                lines.append(
+                    f"{i}. {game['away']} at {game['home']} - {game['status']}"
+                )
+
+            reply = "🏀 Today's NBA Scores:\n\n" + "\n".join(lines)
+
+            return {
+                "reply": reply,
+                "vega_spec": None,
+                "chart_url": None,
+            }                 
 
         # -----------------------------------
         # Live NBA Data: Player Stats
