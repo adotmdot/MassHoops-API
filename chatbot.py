@@ -991,12 +991,21 @@ class CustomerChatbot:
                 "vega_spec": None,
                 "chart_url": None,
 
-                # Data for React player card
+                # Existing fields
                 "player_id": stats["player_id"],
                 "player_name": stats["player"],
                 "team_id": stats["team_id"],
                 "team_name": stats["team"],
                 "points_per_game": stats["points"],
+
+                # New premium card fields
+                "season": stats["season"],
+                "games": stats["games"],
+                "rebounds_per_game": stats["rebounds"],
+                "assists_per_game": stats["assists"],
+                "fg_pct": stats["fg_pct"],
+                "three_pct": stats["three_pct"],
+                "ft_pct": stats["ft_pct"],
             }
 
         # -----------------------------------

@@ -63,7 +63,14 @@ function App() {
         player_name: response.data.player_name,
         team_id: response.data.team_id,
         team_name: response.data.team_name,
+        season: response.data.season,
+        games: response.data.games,
         points_per_game: response.data.points_per_game,
+        rebounds_per_game: response.data.rebounds_per_game,
+        assists_per_game: response.data.assists_per_game,
+        fg_pct: response.data.fg_pct,
+        three_pct: response.data.three_pct,
+        ft_pct: response.data.ft_pct,
       };
 
       setMessages((prev) => [...prev, botMessage]);
@@ -119,28 +126,72 @@ function App() {
 
               {/* Player Card */}
               {msg.player_id && (
-                <div className="player-card">
-                  <img
-                    src={getPlayerHeadshot(msg.player_id)}
-                    alt={msg.player_name}
-                    className="player-headshot"
-                  />
-
-                  <div className="player-info">
-                    <h3>{msg.player_name}</h3>
-                    <p>{msg.team_name}</p>
-                    {msg.points_per_game && (
-                      <p>{msg.points_per_game} PPG</p>
-                    )}
-                  </div>
-
-                  {msg.team_id && (
+                <div className="premium-player-card">
+                  {/* Header */}
+                  <div className="player-card-header">
                     <img
                       src={getTeamLogo(msg.team_id)}
                       alt={msg.team_name}
-                      className="team-logo"
+                      className="header-team-logo"
                     />
-                  )}
+                    <div>
+                      <h2>{msg.player_name}</h2>
+                      <p>{msg.team_name} • {msg.season}</p>
+                    </div>
+                  </div>
+
+                  {/* Body */}
+                  <div className="player-card-body">
+                    {/* Left */}
+                    <div className="player-left">
+                      <img
+                        src={getPlayerHeadshot(msg.player_id)}
+                        alt={msg.player_name}
+                        className="premium-headshot"
+                      />
+                    </div>
+
+                    {/* Center */}
+                    <div className="player-main-stat">
+                      <div className="main-stat-value">
+                        {msg.points_per_game}
+                      </div>
+                      <div className="main-stat-label">PPG</div>
+                    </div>
+
+                    {/* Right Stats */}
+                    <div className="player-stats-grid">
+                      <div>
+                        <span className="stat-value">{msg.rebounds_per_game}</span>
+                        <span className="stat-label">RPG</span>
+                      </div>
+
+                      <div>
+                        <span className="stat-value">{msg.assists_per_game}</span>
+                        <span className="stat-label">APG</span>
+                      </div>
+
+                      <div>
+                        <span className="stat-value">{msg.fg_pct}%</span>
+                        <span className="stat-label">FG%</span>
+                      </div>
+
+                      <div>
+                        <span className="stat-value">{msg.three_pct}%</span>
+                        <span className="stat-label">3PT%</span>
+                      </div>
+
+                      <div>
+                        <span className="stat-value">{msg.ft_pct}%</span>
+                        <span className="stat-label">FT%</span>
+                      </div>
+
+                      <div>
+                        <span className="stat-value">{msg.games}</span>
+                        <span className="stat-label">GP</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
