@@ -91,3 +91,73 @@ body {
 .input-area button:hover {
   background: #1d4ed8;
 }
+
+
+.message-text {
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.table-wrapper {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  background: #0f172a;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.stats-table th {
+  background: #1d4ed8;
+  color: white;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.stats-table td {
+  padding: 12px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.stats-table tr:nth-child(even) {
+  background: #111827;
+}
+
+.stats-table tr:nth-child(odd) {
+  background: #0b1220;
+}
+
+
+/* Message row alignment */
+.message-row {
+  display: flex;
+  margin-bottom: 1rem;
+}
+
+.message-row.user {
+  justify-content: flex-end;
+}
+
+.message-row.assistant {
+  justify-content: flex-start;
+}
+
+/* User bubble */
+.message.user {
+  background: #2563eb;
+  color: white;
+  max-width: 75%;
+}
+
+/* Assistant bubble */
+.message.assistant {
+  background: #1e293b;
+  color: white;
+  max-width: 85%;
+}

@@ -1,6 +1,66 @@
 import { useState } from 'react'
 import './App.css'
 
+function formatMessage(content) {
+  // Detect markdown table rows
+  if (content.includes('|') && content.includes('---')) {
+    const lines = content
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line)
+
+    const tableLines = lines.filter((line) => line.includes('|'))
+
+    if (tableLines.length >= 3) {
+      const headers = tableLines[0]
+        .split('|')
+        .map((cell) => cell.trim())
+        .filter(Boolean)
+
+      const rows = tableLines.slice(2).map((line) =>
+        line
+          .split('|')
+          .map((cell) => cell.trim())
+          .filter(Boolean)
+      )
+
+      const introText = lines
+        .filter((line) => !line.includes('|'))
+        .join(' ')
+
+      return (
+        <>
+          {introText && <p className="message-text">{introText}</p>}
+
+          <div className="table-wrapper">
+            <table className="stats-table">
+              <thead>
+                <tr>
+                  {headers.map((header, index) => (
+                    <th key={index}>{header}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, rowIndex) => (
+                  <tr key={rowIndex}>
+                    {row.map((cell, cellIndex) => (
+                      <td key={cellIndex}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )
+    }
+  }
+
+  // Regular text
+  return <p className="message-text">{content}</p>
+}
+
 function App() {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([
@@ -80,14 +140,19 @@ function App() {
 
         <div className="messages">
           {messages.map((msg, index) => (
-            <div key={index} className={`message ${msg.role}`}>
-              {msg.content}
+            <div
+              key={index}
+              className={`message-row ${msg.role}`}
+            >
+              <div className={`message ${msg.role}`}>
+                {formatMessage(msg.content)}
+              </div>
             </div>
           ))}
 
           {loading && (
             <div className="message assistant">
-              ⏳ Thinking...
+              <p className="message-text">⏳ Thinking...</p>
             </div>
           )}
         </div>
