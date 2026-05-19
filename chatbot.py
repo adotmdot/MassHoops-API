@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_community.utilities import SQLDatabase
 from langchain_community.agent_toolkits.sql.base import create_sql_agent
-from getData import build_sql_database
 
 #from logging_db import log_interaction
 from datetime import datetime
@@ -75,20 +74,58 @@ class ChartEngine:
         return "Basketball Analysis"
 
     @staticmethod
-    def axis_labels(chart_type: str):
+    def axis_labels(question: str, chart_type: str):
+        q = question.lower()
+
+        # X-axis
+        if chart_type == "line":
+            x_label = "Time"
+        elif "team" in q or "standings" in q:
+            x_label = "Team"
+        else:
+            x_label = "Player"
+
+        # Y-axis
+        if "points" in q or "scorer" in q:
+            y_label = "Points Per Game (PPG)"
+        elif "assists" in q:
+            y_label = "Assists Per Game (APG)"
+        elif "rebounds" in q:
+            y_label = "Rebounds Per Game (RPG)"
+        elif "wins" in q:
+            y_label = "Wins"
+        elif "losses" in q:
+            y_label = "Losses"
+        else:
+            y_label = "Value"
+
         return {
-            "x": "Player / Team" if chart_type != "line" else "Time",
-            "y": "Value"
+            "x": x_label,
+            "y": y_label,
         }
 
     @staticmethod
-    def human_format():
+    def human_format(question: str):
+        q = question.lower()
+
         def fmt(x, pos):
-            if x >= 1_000_000:
-                return f"${x/1_000_000:.1f}M"
-            elif x >= 1_000:
-                return f"${x/1_000:.0f}K"
-            return f"${x:.0f}"
+            if any(word in q for word in [
+                "points", "scorer", "assists", "rebounds",
+                "ppg", "apg", "rpg"
+            ]):
+                return f"{x:.1f}"
+
+            if any(word in q for word in [
+                "salary", "revenue", "earnings", "price"
+            ]):
+                if x >= 1_000_000:
+                    return f"${x/1_000_000:.1f}M"
+                elif x >= 1_000:
+                    return f"${x/1_000:.0f}K"
+                return f"${x:.0f}"
+
+            return f"{x:,.0f}"
+
         return fmt
     
     
@@ -96,7 +133,7 @@ class ChartEngine:
     def clean_series_name(name: str):
         if not name:
             return "Total"
-        return str(name).replace("Outsource - ", "").strip()
+        return str(name).strip()
     
     @staticmethod
     def shorten_label(label, max_len=25):
@@ -137,28 +174,6 @@ class ChartEngine:
 
 
 def normalize_prompt(question: str) -> str:
-    if not question:
-        return question
-
-    q = question.lower()
-
-    if "plastics" in q:
-        return question.replace("Plastics", "Outsource - Plastics").replace("plastics", "Outsource - Plastics")
-
-    if "chemical" in q:
-        return question.replace("Chemical", "Outsource - Chemical").replace("chemical", "Outsource - Chemical")
-
-    mappings = {
-        "dry bulk": "Dry Bulk - Trucking",
-        "liquid bulk": "Liquid Bulk - Trucking",
-        "bulk": "Dry Bulk - Trucking",
-    }
-
-    for key, value in mappings.items():
-        if key in q:
-            question = question.replace(key, value)
-            question = question.replace(key.capitalize(), value)
-
     return question
 
 
@@ -360,7 +375,7 @@ class CustomerChatbot:
 
         chart_type = ChartEngine.detect_chart_type(question)
         title = ChartEngine.build_title(question, chart_type)
-        labels = ChartEngine.axis_labels(chart_type)
+        labels = ChartEngine.axis_labels(question, chart_type)
         
         
 
@@ -442,7 +457,7 @@ class CustomerChatbot:
 
         chart_type = ChartEngine.detect_chart_type(question)
         title = ChartEngine.build_title(question, chart_type)
-        labels = ChartEngine.axis_labels(chart_type)
+        labels = ChartEngine.axis_labels(question, chart_type)
         
         fig, ax = plt.subplots(figsize=(8, 6))
 
@@ -451,7 +466,7 @@ class CustomerChatbot:
 
         
 
-        formatter = FuncFormatter(ChartEngine.human_format())
+        formatter = FuncFormatter(ChartEngine.human_format(question))
 
         if chart_type == "pie":
 
@@ -530,7 +545,7 @@ class CustomerChatbot:
             ax.set_ylabel(labels["y"])
             ax.yaxis.set_major_formatter(formatter)
             if len(grouped) > 1:
-                ax.legend(title="Business Unit")
+                ax.legend(title="Series")
 
         else:
             x = [

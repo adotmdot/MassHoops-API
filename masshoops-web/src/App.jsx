@@ -1,165 +1,127 @@
-import { useState, useEffect, useRef } from 'react'
-import './App.css'
+import { useState, useRef, useEffect } from "react";
+import axios from "axios";
+import "./App.css";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
-function formatMessage(content) {
-  // Detect markdown table rows
-  if (content.includes('|') && content.includes('---')) {
-    const lines = content
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line)
+const API_URL = "http://localhost:8000/basketballQuery";
 
-    const tableLines = lines.filter((line) => line.includes('|'))
-
-    if (tableLines.length >= 3) {
-      const headers = tableLines[0]
-        .split('|')
-        .map((cell) => cell.trim())
-        .filter(Boolean)
-
-      const rows = tableLines.slice(2).map((line) =>
-        line
-          .split('|')
-          .map((cell) => cell.trim())
-          .filter(Boolean)
-      )
-
-      const introText = lines
-        .filter((line) => !line.includes('|'))
-        .join(' ')
-
-      return (
-        <>
-          {introText && <p className="message-text">{introText}</p>}
-
-          <div className="table-wrapper">
-            <table className="stats-table">
-              <thead>
-                <tr>
-                  {headers.map((header, index) => (
-                    <th key={index}>{header}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, rowIndex) => (
-                  <tr key={rowIndex}>
-                    {row.map((cell, cellIndex) => (
-                      <td key={cellIndex}>{cell}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )
-    }
-  }
-
-  // Regular text
-  return <p className="message-text">{content}</p>
-}
+const suggestedPrompts = [
+  "Top scorers this season",
+  "Show Lakers roster",
+  "Compare LeBron James vs Michael Jordan",
+  "Eastern Conference standings",
+  "Who leads the league in assists?",
+  "Show a chart of points per game leaders",
+];
 
 function App() {
-  const [message, setMessage] = useState('')
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content:
-        '👋 Welcome to MassHoops! Ask me anything about NBA players, teams, stats, and live games.',
-    },
-  ])
-  const [loading, setLoading] = useState(false)
+  const [question, setQuestion] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const messagesEndRef = useRef(null)
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading])
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
 
-  const sendMessage = async () => {
-    if (!message.trim()) return
+  const sendQuestion = async (prompt = null) => {
+    const userQuestion = prompt || question;
+    if (!userQuestion.trim()) return;
 
     const userMessage = {
-      role: 'user',
-      content: message,
-    }
+      role: "user",
+      content: userQuestion,
+    };
 
-    setMessages((prev) => [...prev, userMessage])
-    setLoading(true)
-
-    const currentMessage = message
-    setMessage('')
+    setMessages((prev) => [...prev, userMessage]);
+    setQuestion("");
+    setLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/basketballQuery', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: 'frontend-demo',
-          message: currentMessage,
-        }),
-      })
+      const response = await axios.post(API_URL, {
+        message: userQuestion,
+        session_id: "masshoops-session-1",
+      });
 
-      const data = await response.json()
+      const botMessage = {
+        role: "assistant",
+        content:
+          response.data.reply ||
+          response.data.answer ||
+          response.data.response ||
+          "No response returned.",
+        chartUrl: response.data.chart_url
+          ? `http://localhost:8000${response.data.chart_url}`
+          : null,
+      };
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: data.reply || 'No response received.',
-        },
-      ])
+      setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
         {
-          role: 'assistant',
-          content: '❌ Error connecting to MassHoops API.',
+          role: "assistant",
+          content: "Error connecting to MassHoops API.",
         },
-      ])
+      ]);
     }
 
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      sendMessage()
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendQuestion();
     }
-  }
+  };
 
   return (
     <div className="app">
-      <aside className="sidebar">
-        <h1>🏀 MassHoops</h1>
-        <p>NBA Analytics AI Assistant</p>
-      </aside>
+      <div className="chat-container">
+        <h1>🏀 MassHoops AI</h1>
 
-      <main className="chat-container">
-        <div className="chat-header">
-          <h2>MassHoops Chat</h2>
-        </div>
+        {messages.length === 0 && (
+          <div className="suggested-prompts">
+            {suggestedPrompts.map((prompt, index) => (
+              <button
+                key={index}
+                className="prompt-button"
+                onClick={() => sendQuestion(prompt)}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="messages">
           {messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`message-row ${msg.role}`}
-            >
-              <div className={`message ${msg.role}`}>
-                {formatMessage(msg.content)}
+            <div key={index} className={`message ${msg.role}`}>
+              <div className="message-text">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {msg.content}
+                </ReactMarkdown>
               </div>
+
+              {msg.chartUrl && (
+                <img
+                  src={msg.chartUrl}
+                  alt="Chart"
+                  className="chart-image"
+                />
+              )}
             </div>
           ))}
 
           {loading && (
-            <div className="message-row assistant">
-              <div className="message assistant">
-                <p className="message-text">⏳ Thinking...</p>
+            <div className="message assistant">
+              <div className="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
               </div>
             </div>
           )}
@@ -167,19 +129,18 @@ function App() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="input-area">
-          <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
+        <div className="input-container">
+          <textarea
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about LeBron James, Lakers stats, standings..."
+            placeholder="Ask anything about basketball..."
           />
-          <button onClick={sendMessage}>Send</button>
+          <button onClick={() => sendQuestion()}>Send</button>
         </div>
-      </main>
+      </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
