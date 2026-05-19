@@ -948,33 +948,6 @@ class CustomerChatbot:
                     "chart_url": None,
                 }       
             
-        # --------------------------------
-        # Live NBA Data: Today's Scores
-        # --------------------------------
-        if "score" in q or "scores" in q or "who won" in q:
-            games = get_scoreboard()
-
-            if not games:
-                return {
-                    "reply": "No NBA games found for today.",
-                    "vega_spec": None,
-                    "chart_url": None,
-                }
-
-            lines = []
-            for i, game in enumerate(games, 1):
-                lines.append(
-                    f"{i}. {game['away']} at {game['home']} - {game['status']}"
-                )
-
-            reply = "🏀 Today's NBA Scores:\n\n" + "\n".join(lines)
-
-            return {
-                "reply": reply,
-                "vega_spec": None,
-                "chart_url": None,
-            }                 
-
         # -----------------------------------
         # Live NBA Data: Player Stats
         # -----------------------------------
@@ -984,8 +957,10 @@ class CustomerChatbot:
                 .replace("what are", "")
                 .replace("what is", "")
                 .replace("show me", "")
+                .replace("show", "") 
                 .replace("'s", "")
                 .replace("stats", "")
+                .replace("?", "")
                 .strip()
                 .title()
             )
@@ -1000,21 +975,28 @@ class CustomerChatbot:
                 }
 
             reply = f"""
-            🏀 {stats['player']} ({stats['team']}) — {stats['season']}
+        🏀 {stats['player']} ({stats['team']}) — {stats['season']}
 
-            Games Played: {stats['games']}
-            Points: {stats['points']} PPG
-            Rebounds: {stats['rebounds']} RPG
-            Assists: {stats['assists']} APG
-            FG%: {stats['fg_pct']}%
-            3PT%: {stats['three_pct']}%
-            FT%: {stats['ft_pct']}%
-            """.strip()
+        Games Played: {stats['games']}
+        Points: {stats['points']} PPG
+        Rebounds: {stats['rebounds']} RPG
+        Assists: {stats['assists']} APG
+        FG%: {stats['fg_pct']}%
+        3PT%: {stats['three_pct']}%
+        FT%: {stats['ft_pct']}%
+        """.strip()
 
             return {
                 "reply": reply,
                 "vega_spec": None,
                 "chart_url": None,
+
+                # Data for React player card
+                "player_id": stats["player_id"],
+                "player_name": stats["player"],
+                "team_id": stats["team_id"],
+                "team_name": stats["team"],
+                "points_per_game": stats["points"],
             }
 
         # -----------------------------------

@@ -97,9 +97,11 @@ def get_player_stats(player_name: str):
         return None
 
     return {
+        "player_id": player_id,
         "player": player_name.title(),
         "season": latest["SEASON_ID"],
         "team": latest["TEAM_ABBREVIATION"],
+        "team_id": int(latest["TEAM_ID"]),
         "games": gp,
         "points": round(float(latest["PTS"]) / gp, 1),
         "rebounds": round(float(latest["REB"]) / gp, 1),
@@ -107,7 +109,7 @@ def get_player_stats(player_name: str):
         "fg_pct": round(float(latest["FG_PCT"]) * 100, 1),
         "three_pct": round(float(latest["FG3_PCT"]) * 100, 1),
         "ft_pct": round(float(latest["FT_PCT"]) * 100, 1),
-    } 
+    }
     
     
 def get_nba_standings(limit=30):
