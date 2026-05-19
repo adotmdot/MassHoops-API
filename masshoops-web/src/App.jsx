@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 function formatMessage(content) {
@@ -71,6 +71,12 @@ function App() {
     },
   ])
   const [loading, setLoading] = useState(false)
+
+  const messagesEndRef = useRef(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
 
   const sendMessage = async () => {
     if (!message.trim()) return
@@ -151,10 +157,14 @@ function App() {
           ))}
 
           {loading && (
-            <div className="message assistant">
-              <p className="message-text">⏳ Thinking...</p>
+            <div className="message-row assistant">
+              <div className="message assistant">
+                <p className="message-text">⏳ Thinking...</p>
+              </div>
             </div>
           )}
+
+          <div ref={messagesEndRef} />
         </div>
 
         <div className="input-area">
