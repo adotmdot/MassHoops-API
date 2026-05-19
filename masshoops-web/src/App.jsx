@@ -1,0 +1,110 @@
+import { useState } from 'react'
+import './App.css'
+
+function App() {
+  const [message, setMessage] = useState('')
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      content:
+        '👋 Welcome to MassHoops! Ask me anything about NBA players, teams, stats, and live games.',
+    },
+  ])
+  const [loading, setLoading] = useState(false)
+
+  const sendMessage = async () => {
+    if (!message.trim()) return
+
+    const userMessage = {
+      role: 'user',
+      content: message,
+    }
+
+    setMessages((prev) => [...prev, userMessage])
+    setLoading(true)
+
+    const currentMessage = message
+    setMessage('')
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/basketballQuery', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: 'frontend-demo',
+          message: currentMessage,
+        }),
+      })
+
+      const data = await response.json()
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: data.reply || 'No response received.',
+        },
+      ])
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: '❌ Error connecting to MassHoops API.',
+        },
+      ])
+    }
+
+    setLoading(false)
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      sendMessage()
+    }
+  }
+
+  return (
+    <div className="app">
+      <aside className="sidebar">
+        <h1>🏀 MassHoops</h1>
+        <p>NBA Analytics AI Assistant</p>
+      </aside>
+
+      <main className="chat-container">
+        <div className="chat-header">
+          <h2>MassHoops Chat</h2>
+        </div>
+
+        <div className="messages">
+          {messages.map((msg, index) => (
+            <div key={index} className={`message ${msg.role}`}>
+              {msg.content}
+            </div>
+          ))}
+
+          {loading && (
+            <div className="message assistant">
+              ⏳ Thinking...
+            </div>
+          )}
+        </div>
+
+        <div className="input-area">
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask about LeBron James, Lakers stats, standings..."
+          />
+          <button onClick={sendMessage}>Send</button>
+        </div>
+      </main>
+    </div>
+  )
+}
+
+export default App

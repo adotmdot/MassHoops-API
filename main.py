@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from chatbot import CustomerChatbot, DatasetSpec
 from getData import build_sql_database
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 # =========================
 
@@ -13,6 +14,14 @@ from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="MassHoops API", version="1.0.0")
 app.mount("/charts", StaticFiles(directory="charts"), name="charts")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For development only
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # =========================
 
