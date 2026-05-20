@@ -6,18 +6,43 @@ from nba_api.stats.endpoints import scoreboardv2
 from nba_api.stats.endpoints import commonteamroster
 from nba_api.stats.static import teams
 from datetime import datetime
+import time
+
+
+def get_current_season():
+    """
+    Returns the current NBA season string.
+    Example:
+      Oct 2026 -> '2026-27'
+      May 2026 -> '2025-26'
+    NBA seasons begin in October.
+    """
+    now = datetime.now()
+
+    if now.month >= 10:
+        start_year = now.year
+    else:
+        start_year = now.year - 1
+
+    end_year = str(start_year + 1)[-2:]
+    return f"{start_year}-{end_year}"
 
 
 
 def get_top_scorers(limit=10):
-    leaders = leagueleaders.LeagueLeaders(
-        season="2024-25",
-        season_type_all_star="Regular Season",
-        stat_category_abbreviation="PTS",
-        per_mode48="PerGame"
+    leaders = retry_nba_api(
+        lambda: leagueleaders.LeagueLeaders(
+            season=get_current_season(),
+            season_type_all_star="Regular Season",
+            stat_category_abbreviation="PTS",
+            per_mode48="PerGame",
+            timeout=60
+        )
     )
 
     df = leaders.get_data_frames()[0]
+    
+    print(f"[DEBUG] Using NBA season: {get_current_season()}")
 
     return [
         {
@@ -27,11 +52,12 @@ def get_top_scorers(limit=10):
         }
         for _, row in df.head(limit).iterrows()
     ]
+    
 
 
 def get_top_rebounders(limit=10):
     leaders = leagueleaders.LeagueLeaders(
-        season="2024-25",
+        season=get_current_season(),
         season_type_all_star="Regular Season",
         stat_category_abbreviation="REB",
         per_mode48="PerGame"
@@ -51,7 +77,7 @@ def get_top_rebounders(limit=10):
 
 def get_top_assist_leaders(limit=10):
     leaders = leagueleaders.LeagueLeaders(
-        season="2024-25",
+        season=get_current_season(),
         season_type_all_star="Regular Season",
         stat_category_abbreviation="AST",
         per_mode48="PerGame"
@@ -80,9 +106,11 @@ def get_player_stats(player_name: str):
 
     player_id = matches[0]["id"]
 
-    career = playercareerstats.PlayerCareerStats(
-        player_id=player_id,
-        timeout=60
+    career = retry_nba_api(
+        lambda: playercareerstats.PlayerCareerStats(
+            player_id=player_id,
+            timeout=60
+        )
     )
     df = career.get_data_frames()[0]
 
@@ -116,7 +144,9 @@ def get_nba_standings(limit=30):
     """
     Returns current NBA standings.
     """
-    standings = leaguestandings.LeagueStandings()
+    standings = retry_nba_api(
+        lambda: leaguestandings.LeagueStandings(timeout=60)
+    )
     df = standings.get_data_frames()[0]
 
     return [
@@ -264,7 +294,12 @@ def get_team_roster(team_name: str):
     if not match:
         return []
 
-    roster = commonteamroster.CommonTeamRoster(team_id=match["id"])
+    roster = retry_nba_api(
+        lambda: commonteamroster.CommonTeamRoster(
+            team_id=match["id"],
+            timeout=60
+        )
+    )
     df = roster.get_data_frames()[0]
 
     return df["PLAYER"].tolist()
@@ -345,4 +380,21 @@ def compare_players(player1: str, player2: str):
         "player1": stats1,
         "player2": stats2,
     }
+    
+    
+def retry_nba_api(api_call, retries=3, delay=2):
+    """
+    Retry nba_api calls if stats.nba.com times out.
+    """
+    for attempt in range(retries):
+        try:
+            return api_call()
+        except Exception as e:
+            if attempt < retries - 1:
+                print(f"[WARN] NBA API failed: {e}")
+                print(f"[WARN] Retrying {attempt + 1}/{retries} in {delay} seconds...")
+                time.sleep(delay)
+            else:
+                print(f"[ERROR] NBA API failed after {retries} attempts.")
+                raise   
   
