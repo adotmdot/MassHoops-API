@@ -5,7 +5,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getPlayerHeadshot, getTeamLogo } from "./utils/imageHelpers";
 
-const API_URL = "http://localhost:8000/basketballQuery";
+const API_URL =
+  "https://masshoops-api.nicebush-7fc1af01.eastus.azurecontainerapps.io/basketballQuery";
 
 const suggestedPrompts = [
   "Top scorers this season",
@@ -55,7 +56,11 @@ function App() {
           "No response returned.",
 
         chartUrl: response.data.chart_url
-          ? `http://localhost:8000${response.data.chart_url}`
+          ? (
+              response.data.chart_url.startsWith("http")
+                ? response.data.chart_url
+                : `https://masshoops-api.nicebush-7fc1af01.eastus.azurecontainerapps.io${response.data.chart_url}`
+            )
           : null,
 
         // New fields for player/team images
