@@ -18,9 +18,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 from nba_live import (
-    get_top_scorers,
-    get_top_rebounders,
-    get_top_assist_leaders,
+    get_league_leaders,
     get_player_stats,
     get_nba_standings,
     get_team_record,
@@ -594,18 +592,57 @@ class CustomerChatbot:
         wants_chart = user_explicitly_requested_chart(question)
 
         q = question.lower()
-
+    
         # -----------------------------------
-        # Live NBA Data: Top Scorers
+        # Dynamic Live NBA League Leaders
         # -----------------------------------
-        if "top scorers" in q or "scoring leaders" in q:
-            players = get_top_scorers(10)
 
-            lines = ["🏀 Top 10 NBA Scorers (Live Data):", ""]
+        def extract_leader_stat(q: str):
+            stat_map = {
+                "points": ("PTS", "PPG"),
+                "scorers": ("PTS", "PPG"),
+                "scoring": ("PTS", "PPG"),
+                "rebounds": ("REB", "RPG"),
+                "rebounders": ("REB", "RPG"),
+                "assists": ("AST", "APG"),
+                "steals": ("STL", "SPG"),
+                "blocks": ("BLK", "BPG"),
+                "turnovers": ("TOV", "TOV"),
+                "efficiency": ("EFF", "EFF"),
+            }
+
+            for word, value in stat_map.items():
+                if word in q:
+                    return value
+
+            return None
+
+
+        leader_request = (
+            "leader" in q
+            or "leaders" in q
+            or "leads" in q
+            or "leading" in q
+            or "top" in q
+        )
+
+        stat_info = extract_leader_stat(q)
+
+        if leader_request and stat_info:
+            stat_code, stat_label = stat_info
+
+            # Extract limit (e.g. "top 20 scorers")
+            match = re.search(r"\btop\s+(\d+)", q)
+            limit = int(match.group(1)) if match else 10
+
+            players = get_league_leaders(stat_code, limit)
+
+            lines = [f"🏀 Top {limit} NBA {stat_label} Leaders (Live NBA Data):", ""]
 
             for i, player in enumerate(players, start=1):
                 lines.append(
-                    f"{i}. {player['player']} ({player['team']}) - {player['value']} PPG"
+                    f"{i}. {player['player']} ({player['team']}) - "
+                    f"{player['value']} {stat_label}"
                 )
 
             return {
@@ -613,50 +650,6 @@ class CustomerChatbot:
                 "vega_spec": None,
                 "chart_url": None,
             }
-            
-            
-        # -----------------------------------
-        # Live NBA Data: Top Rebounders
-        # -----------------------------------
-        if "top rebounders" in q or "rebound leaders" in q:
-            players = get_top_rebounders(10)
-
-            lines = ["🏀 Top 10 NBA Rebound Leaders (Live Data):", ""]
-
-            for i, player in enumerate(players, start=1):
-                lines.append(
-                    f"{i}. {player['player']} ({player['team']}) - {player['value']} RPG"
-                )
-
-            return {
-                "reply": "\n".join(lines),
-                "vega_spec": None,
-                "chart_url": None,
-            }   
-            
-            
-        # -----------------------------------
-        # Live NBA Data: Assist Leaders
-        # -----------------------------------
-        if (
-            "top assists" in q
-            or "assist leaders" in q
-            or "top assist leaders" in q
-        ):
-            players = get_top_assist_leaders(10)
-
-            lines = ["🏀 Top 10 NBA Assist Leaders (Live Data):", ""]
-
-            for i, player in enumerate(players, start=1):
-                lines.append(
-                    f"{i}. {player['player']} ({player['team']}) - {player['value']} APG"
-                )
-
-            return {
-                "reply": "\n".join(lines),
-                "vega_spec": None,
-                "chart_url": None,
-            }  
             
             
         # -----------------------------------

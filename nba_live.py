@@ -398,3 +398,39 @@ def retry_nba_api(api_call, retries=3, delay=2):
                 print(f"[ERROR] NBA API failed after {retries} attempts.")
                 raise   
   
+  
+  
+  
+def get_league_leaders(stat="PTS", limit=10, per_mode="PerGame"):
+    """
+    Dynamically returns NBA league leaders for any supported stat.
+    Examples: PTS, REB, AST, STL, BLK, TOV, EFF
+    """
+
+    leaders = retry_nba_api(
+        lambda: leagueleaders.LeagueLeaders(
+            season=get_current_season(),
+            season_type_all_star="Regular Season",
+            stat_category_abbreviation=stat,
+            per_mode48=per_mode,
+            timeout=60
+        )
+    )
+
+    df = leaders.get_data_frames()[0]
+
+    if df.empty:
+        return []
+
+    if stat not in df.columns:
+        return []
+
+    return [
+        {
+            "player": row["PLAYER"],
+            "team": row["TEAM"],
+            "stat": stat,
+            "value": float(row[stat])
+        }
+        for _, row in df.head(limit).iterrows()
+    ]  
