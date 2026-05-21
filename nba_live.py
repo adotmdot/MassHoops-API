@@ -145,7 +145,7 @@ def get_nba_standings(limit=30):
     Returns current NBA standings.
     """
     standings = retry_nba_api(
-        lambda: leaguestandings.LeagueStandings(timeout=60)
+        lambda: leaguestandings.LeagueStandings(timeout=120)
     )
     df = standings.get_data_frames()[0]
 
@@ -382,7 +382,7 @@ def compare_players(player1: str, player2: str):
     }
     
     
-def retry_nba_api(api_call, retries=3, delay=2):
+def retry_nba_api(api_call, retries=5, delay=4):
     """
     Retry nba_api calls if stats.nba.com times out.
     """
