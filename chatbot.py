@@ -628,6 +628,36 @@ class CustomerChatbot:
 
         stat_info = extract_leader_stat(q)
 
+        # Force NBA-wide league leaders before team leader logic
+        if (
+            ("nba" in q or "league" in q)
+            and stat_info
+            and leader_request
+        ):
+            stat_code, stat_label = stat_info
+
+            match = re.search(r"\btop\s+(\d+)", q)
+            limit = int(match.group(1)) if match else 10
+
+            players = get_league_leaders(stat_code, limit)
+
+            lines = [
+                f"🏀 Top {limit} NBA {stat_label} Leaders:",
+                ""
+            ]
+
+            for i, player in enumerate(players, start=1):
+                lines.append(
+                    f"{i}. {player['player']} ({player['team']}) - "
+                    f"{player['value']} {stat_label}"
+                )
+
+            return {
+                "reply": "\n".join(lines),
+                "vega_spec": None,
+                "chart_url": None,
+            }
+
         if leader_request and stat_info:
             stat_code, stat_label = stat_info
 
