@@ -1,86 +1,209 @@
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import StreamingResponse
+
 from pydantic import BaseModel
 
-from chatbot import CustomerChatbot, DatasetSpec
+from chatbot import (
+    CustomerChatbot,
+    DatasetSpec,
+)
+
 from getData import build_sql_database
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
 
-# =========================
+import traceback
 
-# App
+# =====================================================
+# APP SETUP
+# =====================================================
 
-# =========================
+app = FastAPI(
+    title="MassHoops AI API",
+    version="2.0.0",
+    description=(
+        "MassHoops AI is an AI-powered basketball assistant."
+    ),
+)
 
-app = FastAPI(title="MassHoops API", version="1.0.0")
-app.mount("/charts", StaticFiles(directory="charts"), name="charts")
+# =====================================================
+# STATIC FILES
+# =====================================================
+
+app.mount(
+    "/charts",
+    StaticFiles(directory="charts"),
+    name="charts",
+)
+
+# =====================================================
+# CORS
+# =====================================================
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For development only
+
+    allow_origins=["*"],
+
     allow_credentials=True,
+
     allow_methods=["*"],
+
     allow_headers=["*"],
 )
 
-# =========================
+# =====================================================
+# API KEY
+# =====================================================
 
-# API Key
-
-# =========================
-
-API_KEY = "askhoops-demo"
+API_KEY = "masshoops-demo-key"
 
 def require_api_key(request: Request):
-    if request.headers.get("x-api-key") != API_KEY:
-        raise HTTPException(status_code=403, detail="Invalid API Key")
 
-# =========================
+    incoming_key = request.headers.get(
+        "x-api-key"
+    )
 
-# Chatbot Setup (REUSED)
+    if incoming_key != API_KEY:
 
-# =========================
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid API key.",
+        )
 
-def build_dataset():
+# =====================================================
+# DATASETS
+# =====================================================
+
+def build_datasets():
+
     return [
+
         DatasetSpec(
             key="basketball",
-            display_name="Basketball Stats",
-            description="NBA player stats",
+
+            display_name=(
+                "Basketball Knowledge Base"
+            ),
+
+            description=(
+                "Basketball analytics and AI assistant."
+            ),
+
             sql_database=build_sql_database(),
-            allowed_objects=None
+
+            allowed_objects=None,
         )
     ]
 
+# =====================================================
+# CHATBOT
+# =====================================================
 
-chatbot = CustomerChatbot(build_dataset(), charts_dir="charts")
+chatbot = CustomerChatbot(
+    build_datasets(),
+    charts_dir="charts",
+)
 
-# =========================
-
-# Models
-
-# =========================
+# =====================================================
+# REQUEST MODEL
+# =====================================================
 
 class QueryRequest(BaseModel):
+
     message: str
     session_id: str
 
-# =========================
-
-# Routes
-
-# =========================
+# =====================================================
+# ROOT
+# =====================================================
 
 @app.get("/")
 def root():
-    return {"message": "MassHoops API is running"}
+
+    return {
+        "name": "MassHoops AI API",
+        "status": "running",
+        "version": "2.0.0",
+    }
+
+# =====================================================
+# HEALTH
+# =====================================================
+
+@app.get("/health")
+def health():
+
+    return {
+        "status": "healthy"
+    }
+
+# =====================================================
+# NORMAL CHAT ENDPOINT
+# =====================================================
 
 @app.post("/basketballQuery")
-def basketball_query(payload: QueryRequest, request: Request):
-    #require_api_key(request)
+def basketball_query(
+    payload: QueryRequest,
+    request: Request,
+):
 
-    response = chatbot.answer(
-        session_id=payload.session_id,
-        message=payload.message
+    try:
+
+        response = chatbot.answer(
+            session_id=payload.session_id,
+            message=payload.message,
+        )
+
+        return response
+
+    except Exception as e:
+
+        print("\n[ERROR]")
+        print(str(e))
+
+        traceback.print_exc()
+
+        return {
+            "reply": (
+                "MassHoops AI encountered an error."
+            ),
+            "vega_spec": None,
+            "chart_url": None,
+        }
+
+# =====================================================
+# STREAMING ENDPOINT
+# =====================================================
+
+@app.post("/basketballStream")
+async def basketball_stream(
+    payload: QueryRequest,
+):
+
+    async def generate():
+
+        async for chunk in chatbot.stream_answer(
+            session_id=payload.session_id,
+            message=payload.message,
+        ):
+
+            yield chunk
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/plain",
     )
-    return response
+
+# =====================================================
+# TEST
+# =====================================================
+
+@app.get("/test")
+def test():
+
+    return {
+        "message": (
+            "MassHoops AI backend is working."
+        )
+    }
