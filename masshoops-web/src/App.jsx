@@ -206,13 +206,31 @@ function App() {
 
       <div className="chat-container">
 
-        <h1>
-          🏀 MassHoops AI
-        </h1>
+        <div className="hero-section">
 
-        <p className="subtitle">
-          Your AI basketball knowledge assistant
-        </p>
+          <div className="logo-row">
+
+            <div className="logo-icon">
+              🏀
+            </div>
+
+            <div className="hero-text">
+
+              <h1>
+                MassHoops AI
+              </h1>
+
+              <p className="subtitle">
+                Your AI basketball knowledge assistant
+              </p>
+
+            </div>
+
+          </div>
+
+          <div className="hero-line"></div>
+
+        </div>
 
         {/* ========================================= */}
         {/* SUGGESTED PROMPTS */}

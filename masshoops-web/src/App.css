@@ -54,21 +54,67 @@ body {
    HEADER
 ===================================================== */
 
-.chat-container h1 {
+.hero-section {
+  width: 100%;
+
+  padding-top: 2rem;
+
+  margin-bottom: 2rem;
+}
+
+.logo-row {
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+
+  gap: 24px;
+
+  flex-wrap: wrap;
+
   text-align: center;
+}
 
-  font-size: 3.5rem;
-  font-weight: 800;
+.logo-icon {
+  width: 90px;
+  height: 90px;
 
-  margin-top: 2rem;
-  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 24px;
+
+  font-size: 42px;
 
   background: linear-gradient(
     135deg,
-    #60a5fa,
+    #3b82f6,
     #2563eb
   );
 
+  box-shadow:
+    0 0 35px rgba(
+      37,
+      99,
+      235,
+      0.5
+    );
+}
+
+.hero-text h1 {
+  margin: 0;
+
+  font-size: 5rem;
+  font-weight: 900;
+
+  line-height: 1;
+
+  background: linear-gradient(
+    180deg,
+    #60a5fa,
+    #2563eb
+  );
 
   background-clip: text;
   -webkit-background-clip: text;
@@ -76,13 +122,41 @@ body {
 }
 
 .subtitle {
-  text-align: center;
+  margin-top: 10px;
 
   color: #94a3b8;
 
-  font-size: 1.05rem;
+  font-size: 1.3rem;
 
-  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.hero-line {
+  width: 100%;
+  max-width: 1000px;
+
+  height: 10px;
+
+  margin:
+    2rem auto
+    0 auto;
+
+  border-radius: 999px;
+
+  background: linear-gradient(
+    90deg,
+    #2563eb,
+    #3b82f6,
+    #2563eb
+  );
+
+  box-shadow:
+    0 0 30px rgba(
+      59,
+      130,
+      246,
+      0.65
+    );
 }
 
 /* =====================================================
@@ -597,5 +671,24 @@ body {
   .input-container button {
     min-width: 90px;
     padding: 0 16px;
+  }
+
+  .logo-row {
+    flex-direction: column;
+  }
+
+  .hero-text h1 {
+    font-size: 3rem;
+  }
+
+  .logo-icon {
+    width: 70px;
+    height: 70px;
+
+    font-size: 32px;
+  }
+
+  .subtitle {
+    font-size: 1rem;
   }
 }
